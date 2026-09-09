@@ -1,0 +1,1 @@
+ALTER TABLE artistas ADD COLUMN foto VARCHAR(255);
