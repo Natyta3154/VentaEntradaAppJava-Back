@@ -62,5 +62,3 @@ logging:
     root: INFO
     com.example.venta_entrada: INFO
     org.springframework.security: WARN
-  file:
-    name: logs/app.log
