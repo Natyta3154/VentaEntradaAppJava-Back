@@ -90,7 +90,7 @@ public class AuthController {
 
         return refreshTokenService.findByToken(refreshTokenString)
             .map(refreshTokenService::verifyExpiration)
-            .map(RefreshToken::getUsuario)
+            .map(rt -> rt != null ? rt.getUsuario() : null)
             .map(usuario -> {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(usuario.getEmail());
                 String accessToken = jwtService.generateToken(userDetails);

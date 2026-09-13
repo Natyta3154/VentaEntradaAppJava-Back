@@ -43,7 +43,7 @@ public class JwtService {
      * @return el nombre de usuario almacenado en el token
      */
     public String extractUsername(String token) {
-        return extractClaim(token, Claims::getSubject);
+        return extractClaim(token, c -> c != null ? c.getSubject() : null);
     }
 
     /**
@@ -73,7 +73,7 @@ public class JwtService {
             "roles",
             userDetails.getAuthorities()
                     .stream()
-                    .map(GrantedAuthority::getAuthority)
+                    .map(a -> a != null ? a.getAuthority() : null)
                     .toList()
     );
 
@@ -144,7 +144,7 @@ public class JwtService {
      * @return la fecha de expiración almacenada en el token
      */
     private Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
+        return extractClaim(token, c -> c != null ? c.getExpiration() : null);
     }
 
     /**

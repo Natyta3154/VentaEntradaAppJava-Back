@@ -14,8 +14,11 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+import lombok.extern.slf4j.Slf4j;
+
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EmailService {
 
     private final JavaMailSender mailSender;
@@ -60,11 +63,10 @@ public class EmailService {
             }
 
             mailSender.send(message);
-            System.out.println("Email enviado exitosamente a: " + usuario.getEmail());
+            log.info("Email enviado exitosamente a: {}", usuario.getEmail());
 
         } catch (MessagingException e) {
-            System.err.println("Error al enviar el email con las entradas a: " + usuario.getEmail());
-            e.printStackTrace();
+            log.error("Error al enviar el email con las entradas a: {}", usuario.getEmail(), e);
         }
     }
 }

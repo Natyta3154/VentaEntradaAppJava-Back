@@ -113,6 +113,7 @@ public class VentaService {
                             .build();
                     pagoRepository.save(pago);
                     
+                    compra.getEntradas().forEach(e -> e.setEstado(EstadoEntrada.VALIDA));
                     compraRepository.save(compra);
                     
                     // Inicializar propiedades lazy para evitar error en el hilo asíncrono

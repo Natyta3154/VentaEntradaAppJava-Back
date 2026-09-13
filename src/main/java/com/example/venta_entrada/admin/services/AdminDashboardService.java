@@ -69,8 +69,8 @@ public class AdminDashboardService {
         // Filtra solo compras con estado 'COMPLETADA', extrae el total de cada una y suma los montos.
         Double totalRecaudado = compras.stream()
                 .filter(c -> c.getEstado() == EstadoCompra.COMPLETADA)
-                .map(Compra::getTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .map(c -> c != null && c.getTotal() != null ? c.getTotal() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, (acc, val) -> acc != null && val != null ? acc.add(val) : BigDecimal.ZERO)
                 .doubleValue();
 
         // 2. Calcular las ventas del día actual:
@@ -78,8 +78,8 @@ public class AdminDashboardService {
         LocalDate hoy = LocalDate.now();
         Double ventasDelDia = compras.stream()
                 .filter(c -> c.getEstado() == EstadoCompra.COMPLETADA && c.getFechaCompra().toLocalDate().isEqual(hoy))
-                .map(Compra::getTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .map(c -> c != null && c.getTotal() != null ? c.getTotal() : BigDecimal.ZERO)
+                .reduce(BigDecimal.ZERO, (acc, val) -> acc != null && val != null ? acc.add(val) : BigDecimal.ZERO)
                 .doubleValue();
 
         // 3. Contar entradas vendidas:
@@ -98,7 +98,7 @@ public class AdminDashboardService {
 
         // 6. Contar eventos que actualmente están marcados como activos:
         long eventosActivos = eventoRepository.findAll().stream()
-                .filter(Evento::getActivo)
+                .filter(e -> e != null && Boolean.TRUE.equals(e.getActivo()))
                 .count();
 
         // 7. Contar compras que fueron reembolsadas:
@@ -130,7 +130,7 @@ public class AdminDashboardService {
     public List<EventoOcupacionDTO> getOcupacionEventos() {
         // Filtrar eventos: que estén activos y cuya fecha sea posterior a ayer (eventos actuales/futuros)
         List<Evento> eventos = eventoRepository.findAll().stream()
-                .filter(Evento::getActivo)
+                .filter(e -> e != null && Boolean.TRUE.equals(e.getActivo()))
                 .filter(e -> e.getFechaEvento().isAfter(LocalDateTime.now().minusDays(1)))
                 .collect(Collectors.toList());
 

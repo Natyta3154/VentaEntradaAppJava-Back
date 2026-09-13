@@ -11,9 +11,12 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.Collections;
 import java.util.Map;
 
+import lombok.extern.slf4j.Slf4j;
+
 @RestController
 @RequestMapping("/api/upload")
 @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+@Slf4j
 public class FileUploadController {
 
     @Autowired
@@ -29,7 +32,7 @@ public class FileUploadController {
             String imageUrl = cloudinaryService.uploadImage(file);
             return ResponseEntity.ok(Collections.singletonMap("url", imageUrl));
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error uploading image", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Collections.singletonMap("error", "Error uploading image: " + e.getMessage()));
         }

@@ -23,6 +23,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import org.springframework.http.HttpMethod;
 import java.util.Arrays;
 import java.util.List;
 
@@ -50,7 +51,7 @@ public class SecurityConfig {
             .csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 .csrfTokenRequestHandler(requestHandler)
-                .ignoringRequestMatchers("/api/auth/**", "/api/usuarios/registro", "/api/ventas/webhook/**")
+                .ignoringRequestMatchers("/api/auth/**", "/api/usuarios/registro", "/api/ventas/webhook/**", "/api/contactos/**")
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
@@ -64,6 +65,7 @@ public class SecurityConfig {
                     "/error"
                     // Eliminamos swagger, api-docs y test-mp-direct para protegerlos
                 ).permitAll() 
+                .requestMatchers(HttpMethod.POST, "/api/contactos").permitAll()
                 .requestMatchers("/api/ventas/test-mp-direct", "/swagger-ui/**", "/v3/api-docs/**").hasAuthority("ROLE_ADMIN")
                 .anyRequest().authenticated()
             )
