@@ -24,7 +24,7 @@ public class MercadoPagoService {
     /**
      * URL base pública del backend donde Mercado Pago enviará las notificaciones IPN y retornos.
      */
-    @Value("${APP_URL:http://localhost:8080}")
+    @Value("${app.backend-url:${APP_URL:https://ventaentradaappjava-back.onrender.com}}")
     private String appUrl;
 
     /**

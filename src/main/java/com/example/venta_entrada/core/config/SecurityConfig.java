@@ -72,6 +72,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Endpoints públicos que no requieren login
                 .requestMatchers(
+                    "/",
+                    "/api/health",
                     "/api/usuarios/registro", 
                     "/api/auth/**", 
                     "/api/ventas/webhook/**",
