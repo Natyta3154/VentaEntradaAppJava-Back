@@ -20,6 +20,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Implementación del servicio de administración de ventas y entradas.
+ * 
+ * Permite a los administradores:
+ * 1. Listar todas las órdenes de compra con paginación y datos consolidados del usuario y pago.
+ * 2. Listar todas las entradas individuales vendidas o reservadas con paginación.
+ * 3. Ejecutar devoluciones / reembolsos automáticos en Mercado Pago y cancelar las entradas asociadas.
+ * 4. Eliminar registros de compra si es necesario.
+ */
 @Service
 @RequiredArgsConstructor
 public class AdminVentasServiceImpl implements AdminVentasService {
@@ -28,6 +37,12 @@ public class AdminVentasServiceImpl implements AdminVentasService {
     private final EntradaRepository entradaRepository;
     private final MercadoPagoService mercadoPagoService;
 
+    /**
+     * Obtiene una página con todas las compras realizadas en el sistema.
+     * 
+     * @param pageable Configuración de paginación y ordenamiento.
+     * @return Página de {@link AdminCompraResponseDTO} con información detallada de la compra.
+     */
     @Override
     public Page<AdminCompraResponseDTO> obtenerTodasLasCompras(Pageable pageable) {
         return compraRepository.findAll(pageable).map(compra -> 
@@ -43,6 +58,12 @@ public class AdminVentasServiceImpl implements AdminVentasService {
         );
     }
 
+    /**
+     * Obtiene una página con todas las entradas individuales emitidas.
+     * 
+     * @param pageable Configuración de paginación y ordenamiento.
+     * @return Página de {@link AdminEntradaResponseDTO} con datos del evento, tipo y comprador.
+     */
     @Override
     public Page<AdminEntradaResponseDTO> obtenerTodasLasEntradas(Pageable pageable) {
         return entradaRepository.findAll(pageable).map(entrada -> 
@@ -58,6 +79,18 @@ public class AdminVentasServiceImpl implements AdminVentasService {
         );
     }
 
+    /**
+     * Procesa la devolución y reembolso total de una compra.
+     * 
+     * Validaciones y efectos:
+     * 1. La compra debe estar en estado 'COMPLETADA'.
+     * 2. Debe poseer un ID de referencia de pago de Mercado Pago.
+     * 3. Invoca la API de Mercado Pago para devolver el dinero al comprador.
+     * 4. Cambia el estado de la compra a 'REEMBOLSADA'.
+     * 5. Cambia el estado de cada entrada a 'CANCELADA' para invalidar los códigos QR en puerta.
+     * 
+     * @param compraId Identificador de la compra a reembolsar.
+     */
     @Override
     @Transactional
     public void procesarDevolucion(Long compraId) {
@@ -74,13 +107,14 @@ public class AdminVentasServiceImpl implements AdminVentasService {
         
         Long paymentId = Long.valueOf(compra.getPago().getReferenciaPago());
         
-        // Llamada a Mercado Pago
+        // Llamada a la pasarela de Mercado Pago para realizar el refund
         PaymentRefund refund = mercadoPagoService.procesarDevolucion(paymentId);
         
         if (refund != null && "approved".equals(refund.getStatus())) {
             compra.setEstado(EstadoCompra.REEMBOLSADA);
             compra.getPago().setEstado(EstadoPago.REEMBOLSADO);
             
+            // Invalidar todas las entradas asociadas a esta compra
             compra.getEntradas().forEach(entrada -> {
                 entrada.setEstado(EstadoEntrada.CANCELADA);
             });
@@ -91,6 +125,11 @@ public class AdminVentasServiceImpl implements AdminVentasService {
         }
     }
 
+    /**
+     * Elimina físicamente una orden de compra por su ID.
+     * 
+     * @param id Identificador de la compra a eliminar.
+     */
     @Override
     @Transactional
     public void eliminarCompra(Long id) {
@@ -100,3 +139,4 @@ public class AdminVentasServiceImpl implements AdminVentasService {
         compraRepository.deleteById(id);
     }
 }
+

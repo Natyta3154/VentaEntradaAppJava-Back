@@ -27,6 +27,16 @@ import org.springframework.http.HttpMethod;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * Configuración central de seguridad web con Spring Security 6 / Spring Boot 3+.
+ * 
+ * Aspectos configurados:
+ * 1. Autenticación Stateless (sin sesiones en memoria) mediante tokens JWT guardados en cookies HTTP-only.
+ * 2. Protección CSRF con token en cookie accesible desde el frontend (header X-XSRF-TOKEN).
+ * 3. Configuración CORS dinámica para permitir peticiones desde el frontend con credenciales/cookies.
+ * 4. Control de acceso granular por endpoints y por roles (ROLE_ADMIN, ROLE_CLIENTE, ROLE_PORTERO).
+ * 5. Filtro personalizado de autenticación JWT insertado antes del filtro de usuario/contraseña estándar.
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -39,6 +49,12 @@ public class SecurityConfig {
     @Value("${app.frontend-url:http://localhost:5173}")
     private String frontendUrl;
 
+    /**
+     * Define la cadena de filtros de seguridad HTTP y las reglas de autorización de rutas.
+     * 
+     * @param http Objeto para configurar la seguridad web.
+     * @return {@link SecurityFilterChain} construida.
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler requestHandler = new org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler();
@@ -54,6 +70,7 @@ public class SecurityConfig {
                 .ignoringRequestMatchers("/api/auth/**", "/api/usuarios/registro", "/api/ventas/webhook/**", "/api/contactos/**")
             )
             .authorizeHttpRequests(auth -> auth
+                // Endpoints públicos que no requieren login
                 .requestMatchers(
                     "/api/usuarios/registro", 
                     "/api/auth/**", 
@@ -63,10 +80,11 @@ public class SecurityConfig {
                     "/api/imagenes/**",
                     "/api/videos/**",
                     "/error"
-                    // Eliminamos swagger, api-docs y test-mp-direct para protegerlos
                 ).permitAll() 
                 .requestMatchers(HttpMethod.POST, "/api/contactos").permitAll()
+                // Endpoints restringidos exclusivamente para Administradores
                 .requestMatchers("/api/ventas/test-mp-direct", "/swagger-ui/**", "/v3/api-docs/**").hasAuthority("ROLE_ADMIN")
+                // Cualquier otra petición requiere token válido
                 .anyRequest().authenticated()
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -77,19 +95,27 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Configura los orígenes, métodos y encabezados permitidos para peticiones CORS.
+     * 
+     * @return Fuente de configuración CORS basada en URLs.
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(frontendUrl));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(java.util.Collections.singletonList("*"));
-        configuration.setAllowCredentials(true); // Permitir cookies (necesario para JWT)
+        configuration.setAllowCredentials(true); // Permitir cookies (necesario para JWT en cookies)
         
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 
+    /**
+     * Proveedor de autenticación que consulta usuarios en base de datos y valida contraseñas con BCrypt.
+     */
     @Bean
     public AuthenticationProvider authenticationProvider() {
         DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(userDetailsService);
@@ -97,13 +123,20 @@ public class SecurityConfig {
         return authProvider;
     }
 
+    /**
+     * Administrador de autenticación global de Spring Security.
+     */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
+    /**
+     * Bean del codificador seguro de contraseñas mediante algoritmo BCrypt (fuerza por defecto 10 rounds).
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 }
+
