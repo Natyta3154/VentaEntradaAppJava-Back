@@ -21,7 +21,6 @@ CREATE TABLE usuarios (
         FOREIGN KEY (rol_id)
         REFERENCES roles(id)
         ON DELETE RESTRICT
-        ON UPDATE CASCADE
 );
 
 CREATE TABLE eventos (
