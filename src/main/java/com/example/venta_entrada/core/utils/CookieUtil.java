@@ -11,6 +11,9 @@ import org.springframework.stereotype.Component;
 @Component
 public class CookieUtil {
 
+    @org.springframework.beans.factory.annotation.Value("${app.frontend-url:http://localhost:5173}")
+    private String frontendUrl;
+
     /**
      * Crea una cookie segura para el token de acceso (Access Token).
      * @param token El JWT generado
@@ -21,8 +24,9 @@ public class CookieUtil {
         cookie.setMaxAge((int) (durationMs / 1000));
         cookie.setHttpOnly(true);
         cookie.setPath("/");
-        cookie.setSecure(isProdEnvironment()); // Solo true en producción/HTTPS
-        cookie.setAttribute("SameSite", "Lax"); // Mitiga CSRF, Lax permite navegación normal
+        boolean secure = isProdEnvironment();
+        cookie.setSecure(secure);
+        cookie.setAttribute("SameSite", secure ? "None" : "Lax");
         return cookie;
     }
 
@@ -36,8 +40,9 @@ public class CookieUtil {
         cookie.setMaxAge((int) (durationMs / 1000));
         cookie.setHttpOnly(true);
         cookie.setPath("/api/auth"); 
-        cookie.setSecure(isProdEnvironment());
-        cookie.setAttribute("SameSite", "Strict"); // Refresh token debe ser muy estricto
+        boolean secure = isProdEnvironment();
+        cookie.setSecure(secure);
+        cookie.setAttribute("SameSite", secure ? "None" : "Lax");
         return cookie;
     }
 
@@ -50,17 +55,18 @@ public class CookieUtil {
         cookie.setMaxAge(0); // Tiempo 0 indica al navegador que debe destruirla de inmediato
         cookie.setHttpOnly(true);
         cookie.setPath(path);
-        cookie.setSecure(isProdEnvironment());
-        cookie.setAttribute("SameSite", "Lax");
+        boolean secure = isProdEnvironment();
+        cookie.setSecure(secure);
+        cookie.setAttribute("SameSite", secure ? "None" : "Lax");
         return cookie;
     }
 
     private boolean isProdEnvironment() {
-        // En una app real, podrías inyectar el environment. 
-        // Para simplificar, asumimos HTTPS si se define en ENV (o true por defecto para no romper local si están en puertos distintos)
-        // Spring Environment se podría inyectar aquí. Retornaremos false localmente, true si env var indica.
         String env = System.getenv("SPRING_PROFILES_ACTIVE");
-        return "prod".equals(env);
+        String forceSecure = System.getenv("COOKIE_SECURE");
+        if ("true".equalsIgnoreCase(forceSecure)) return true;
+        if ("prod".equalsIgnoreCase(env) || "production".equalsIgnoreCase(env)) return true;
+        return frontendUrl != null && frontendUrl.contains("https://");
     }
 
     /**

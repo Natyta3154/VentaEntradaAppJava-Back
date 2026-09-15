@@ -105,7 +105,18 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of(frontendUrl));
+        String urlConfig = (frontendUrl != null) ? frontendUrl : "http://localhost:5173";
+        String[] rawOrigins = urlConfig.split(",");
+        List<String> origins = new java.util.ArrayList<>();
+        for (String origin : rawOrigins) {
+            if (origin != null) {
+                String clean = origin.trim().replaceAll("/+$", "");
+                if (!clean.isEmpty()) {
+                    origins.add(clean);
+                }
+            }
+        }
+        configuration.setAllowedOrigins(origins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(java.util.Collections.singletonList("*"));
         configuration.setAllowCredentials(true); // Permitir cookies (necesario para JWT en cookies)

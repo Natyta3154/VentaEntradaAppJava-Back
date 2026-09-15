@@ -17,8 +17,21 @@ public class CorsConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
+        String urlConfig = (frontendUrl != null) ? frontendUrl : "http://localhost:5173";
+        String[] rawOrigins = urlConfig.split(",");
+        java.util.List<String> validOrigins = new java.util.ArrayList<>();
+        for (String origin : rawOrigins) {
+            if (origin != null) {
+                String clean = origin.trim().replaceAll("/+$", "");
+                if (!clean.isEmpty()) {
+                    validOrigins.add(clean);
+                }
+            }
+        }
+        String[] origins = validOrigins.toArray(new String[0]);
+
         registry.addMapping("/**")
-                .allowedOrigins(frontendUrl)
+                .allowedOrigins(origins)
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true);
