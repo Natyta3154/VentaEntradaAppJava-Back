@@ -81,6 +81,9 @@ public class SecurityConfig {
                     "/api/artistas/**",
                     "/api/imagenes/**",
                     "/api/videos/**",
+                    "/api/seo/**",
+                    "/sitemap.xml",
+                    "/robots.txt",
                     "/error"
                 ).permitAll() 
                 .requestMatchers(HttpMethod.POST, "/api/contactos").permitAll()
