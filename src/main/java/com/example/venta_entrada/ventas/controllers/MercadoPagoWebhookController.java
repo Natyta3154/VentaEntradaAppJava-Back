@@ -51,18 +51,32 @@ public class MercadoPagoWebhookController {
         return ResponseEntity.ok("OK");
     }
 
+    private String getRedirectUrl() {
+        if (frontendUrl == null || frontendUrl.isBlank()) {
+            return "https://venta-entrada-app-java-front.vercel.app";
+        }
+        String[] urls = frontendUrl.split(",");
+        for (String url : urls) {
+            String trimmed = url.trim();
+            if (trimmed.startsWith("https://")) {
+                return trimmed;
+            }
+        }
+        return urls[0].trim();
+    }
+
     @GetMapping("/success")
     public ResponseEntity<Void> success() {
-        return ResponseEntity.status(302).header("Location", frontendUrl).build();
+        return ResponseEntity.status(302).header("Location", getRedirectUrl() + "/mis-entradas").build();
     }
 
     @GetMapping("/pending")
     public ResponseEntity<Void> pending() {
-        return ResponseEntity.status(302).header("Location", frontendUrl).build();
+        return ResponseEntity.status(302).header("Location", getRedirectUrl()).build();
     }
 
     @GetMapping("/failure")
     public ResponseEntity<Void> failure() {
-        return ResponseEntity.status(302).header("Location", frontendUrl).build();
+        return ResponseEntity.status(302).header("Location", getRedirectUrl()).build();
     }
 }

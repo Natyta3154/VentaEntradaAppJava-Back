@@ -132,7 +132,7 @@ public class AuthController {
      * @param response Respuesta HTTP donde se coloca la nueva cookie 'access_token'.
      * @return {@link ResponseEntity<LoginResponse>} Datos del usuario con el token renovado.
      */
-    @Operation(summary = "Refrescar el Access Token usando la cookie de Refresh Token")
+    @Operation(summary = "Refrescar el Access Token usando la cookie de Refresh Token (con Rotación de Refresh Token RTR)")
     @PostMapping("/refresh")
     public ResponseEntity<LoginResponse> refreshToken(HttpServletRequest request, HttpServletResponse response) {
         // 1. Extraer el valor de la cookie 'refresh_token'
@@ -143,30 +143,33 @@ public class AuthController {
             return ResponseEntity.status(401).build();
         }
 
-        // 3. Buscar en la base de datos, validar expiración y generar nuevo Access Token
-        return refreshTokenService.findByToken(refreshTokenString)
-            .map(refreshTokenService::verifyExpiration) // Lanza excepción si expiró
-            .map(rt -> rt != null ? rt.getUsuario() : null)
-            .map(usuario -> {
-                // Cargar detalles del usuario y crear nuevo JWT
-                UserDetails userDetails = userDetailsService.loadUserByUsername(usuario.getEmail());
-                String accessToken = jwtService.generateToken(userDetails);
-                
-                // Sobrescribir la cookie con el nuevo token vigente
-                Cookie accessCookie = cookieUtil.createAccessTokenCookie(accessToken, jwtExpiration);
-                response.addCookie(accessCookie);
-                
-                String rolName = usuario.getRol().getNombre();
-                
-                return ResponseEntity.ok(LoginResponse.builder()
-                    .mensaje("Token refrescado exitosamente")
-                    .rol(rolName)
-                    .id(usuario.getId())
-                    .email(usuario.getEmail())
-                    .username(usuario.getNombre() + " " + usuario.getApellido())
-                    .build());
-            })
-            .orElseThrow(() -> new RuntimeException("Refresh token no encontrado en la base de datos"));
+        // 3. Buscar en la base de datos, validar, rotar Refresh Token (RTR) y generar nuevo Access Token
+        RefreshToken oldToken = refreshTokenService.findByToken(refreshTokenString)
+            .orElseThrow(() -> new RuntimeException("Refresh token no encontrado o revocado"));
+
+        RefreshToken newRefreshToken = refreshTokenService.rotateRefreshToken(oldToken);
+        com.example.venta_entrada.usuarios.models.Usuario usuario = newRefreshToken.getUsuario();
+
+        // Cargar detalles del usuario y crear nuevo Access Token JWT
+        UserDetails userDetails = userDetailsService.loadUserByUsername(usuario.getEmail());
+        String accessToken = jwtService.generateToken(userDetails);
+        
+        // Sobrescribir ambas cookies con los tokens renovados y rotados
+        Cookie accessCookie = cookieUtil.createAccessTokenCookie(accessToken, jwtExpiration);
+        Cookie refreshCookie = cookieUtil.createRefreshTokenCookie(newRefreshToken.getToken(), refreshExpiration);
+        
+        response.addCookie(accessCookie);
+        response.addCookie(refreshCookie);
+        
+        String rolName = usuario.getRol().getNombre();
+        
+        return ResponseEntity.ok(LoginResponse.builder()
+            .mensaje("Tokens refrescados y rotados exitosamente")
+            .rol(rolName)
+            .id(usuario.getId())
+            .email(usuario.getEmail())
+            .username(usuario.getNombre() + " " + usuario.getApellido())
+            .build());
     }
 
     /**

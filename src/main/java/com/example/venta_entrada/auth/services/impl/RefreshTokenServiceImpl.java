@@ -66,6 +66,29 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     }
 
     /**
+     * Implementa Rotación de Refresh Tokens (RTR):
+     * Valida y destruye el Refresh Token actual y emite uno completamente nuevo para el usuario.
+     */
+    @Override
+    @Transactional
+    public RefreshToken rotateRefreshToken(RefreshToken oldToken) {
+        verifyExpiration(oldToken);
+        Usuario usuario = oldToken.getUsuario();
+
+        // Destruir el token antiguo utilizado
+        refreshTokenRepository.delete(oldToken);
+
+        // Generar un nuevo Refresh Token seguro (UUID)
+        RefreshToken newRefreshToken = RefreshToken.builder()
+                .usuario(usuario)
+                .token(UUID.randomUUID().toString())
+                .expiryDate(LocalDateTime.now().plusNanos(refreshTokenDurationMs * 1_000_000))
+                .build();
+
+        return refreshTokenRepository.save(newRefreshToken);
+    }
+
+    /**
      * Elimina el token de la BD cuando el usuario hace logout.
      */
     @Override

@@ -17,19 +17,25 @@ RUN ./mvnw dependency:go-offline -B
 COPY src src
 RUN ./mvnw clean package -DskipTests
 
-# Etapa 2: Imagen ligera de ejecución (JRE 21)
+# Etapa 2: Imagen ligera de ejecución (JRE 21 Alpine)
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Crear un usuario no-root por seguridad
-RUN addgroup -S spring && adduser -S spring -G spring
-USER spring:spring
+# Crear usuario y grupo no-root con ID explícito
+RUN addgroup -g 1001 -S spring && adduser -u 1001 -S spring -G spring
 
-# Copiar el JAR generado en la etapa anterior
-COPY --from=build /app/target/*.jar app.jar
+# Copiar el JAR con propiedad del usuario no privilegiado
+COPY --from=build --chown=spring:spring /app/target/*.jar app.jar
+
+# Establecer usuario no privilegiado
+USER spring:spring
 
 # Exponer el puerto
 EXPOSE 8080
 
-# Ejecutar la aplicación inyectando el puerto dinámico de Render
-ENTRYPOINT ["sh", "-c", "java -Dserver.port=${PORT:-8080} -jar app.jar"]
+# Healthcheck de seguridad para verificar disponibilidad del servicio
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT:-8080}/api/health || exit 1
+
+# Ejecutar con soporte para cgroups de contenedores y memoria controlada
+ENTRYPOINT ["sh", "-c", "java -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Dserver.port=${PORT:-8080} -jar app.jar"]

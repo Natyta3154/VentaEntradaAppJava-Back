@@ -48,14 +48,33 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }
 
+    @ExceptionHandler(org.springframework.dao.DataAccessException.class)
+    public ResponseEntity<Map<String, Object>> handleDataAccessException(org.springframework.dao.DataAccessException ex) {
+        log.error("Error de acceso a datos / base de datos: ", ex);
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("timestamp", LocalDateTime.now());
+        errorResponse.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
+        errorResponse.put("error", "Database Error");
+        errorResponse.put("message", "Ocurrió un error al procesar la operación en la base de datos.");
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
-        log.warn("Runtime exception: {}", ex.getMessage());
+        log.warn("Runtime exception: ", ex);
         Map<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("timestamp", LocalDateTime.now());
         errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
         errorResponse.put("error", "Bad Request");
-        errorResponse.put("message", ex.getMessage());
+        
+        String rawMsg = ex.getMessage();
+        // Si el mensaje contiene información técnica interna de SQL/Hibernate, devolver mensaje genérico
+        if (rawMsg != null && (rawMsg.contains("SQL") || rawMsg.contains("JDBC") || rawMsg.contains("Table") || rawMsg.contains("Constraint") || rawMsg.contains("could not execute"))) {
+            errorResponse.put("message", "No se pudo completar la operación solicitada. Verifique los datos enviados.");
+        } else {
+            errorResponse.put("message", rawMsg != null ? rawMsg : "Error en la solicitud.");
+        }
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
     }
