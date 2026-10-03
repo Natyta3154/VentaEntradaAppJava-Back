@@ -57,18 +57,9 @@ public class SecurityConfig {
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler requestHandler = new org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler();
-        // Permite que Spring resuelva el token tanto de headers como de parámetros sin enmascaramiento adicional
-        requestHandler.setCsrfRequestAttributeName(null); 
-
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            // Habilitamos CSRF utilizando una cookie accesible desde JS para que el frontend pueda enviar el header X-XSRF-TOKEN
-            .csrf(csrf -> csrf
-                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                .csrfTokenRequestHandler(requestHandler)
-                .ignoringRequestMatchers("/api/auth/**", "/api/usuarios/registro", "/api/ventas/webhook/**", "/api/contactos/**")
-            )
+            .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
                 // Endpoints públicos que no requieren login
                 .requestMatchers(
@@ -94,8 +85,7 @@ public class SecurityConfig {
             )
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authenticationProvider(authenticationProvider())
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-            .addFilterAfter(new CsrfCookieFilter(), org.springframework.security.web.authentication.www.BasicAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         
         return http.build();
     }

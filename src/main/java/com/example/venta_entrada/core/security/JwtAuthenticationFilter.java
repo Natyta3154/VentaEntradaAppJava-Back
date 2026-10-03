@@ -35,13 +35,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // 1. Extraer el token específicamente de la cookie llamada "access_token"
-        // En una arquitectura tradicional esto se haría leyendo el header: request.getHeader("Authorization")
-        String jwt = cookieUtil.getCookieValue(request, "access_token");
+        // 1. Extraer el token del header Authorization: Bearer <token> o de la cookie "access_token"
+        String jwt = null;
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            jwt = authHeader.substring(7);
+        } else {
+            jwt = cookieUtil.getCookieValue(request, "access_token");
+        }
         
         // 2. Si no hay token, simplemente pasamos la petición al siguiente filtro
         // Puede que sea una ruta pública (como /login) que no necesita token.
-        if (jwt == null) {
+        if (jwt == null || jwt.isBlank()) {
             filterChain.doFilter(request, response);
             return;
         }
